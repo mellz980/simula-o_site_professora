@@ -9,6 +9,7 @@ const Register = () => {
   const [fullName, setFullName] = useState('');
   const [classId, setClassId] = useState('');
   const [classes, setClasses] = useState([]);
+  const [role, setRole] = useState('student');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -28,7 +29,22 @@ const Register = () => {
     setError(null);
 
     try {
-      // 1. Sign up
+      // 1. If student, check if email is authorized
+      let studentClassId = null;
+      if (role === 'student') {
+        const { data: allowed, error: allowedError } = await supabase
+          .from('allowed_students')
+          .select('class_id')
+          .eq('email', email.toLowerCase())
+          .single();
+
+        if (allowedError || !allowed) {
+          throw new Error('Seu e-mail não está autorizado pela professora. Entre em contato com ela.');
+        }
+        studentClassId = allowed.class_id;
+      }
+
+      // 2. Sign up
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -37,27 +53,37 @@ const Register = () => {
       if (authError) throw authError;
 
       if (authData.user) {
-        // 2. Create profile
-        // Logic: First user is teacher, others are students
-        const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
-        const role = count === 0 ? 'teacher' : 'student';
-
+        // 3. Create profile
         const { error: profileError } = await supabase.from('profiles').insert([
           {
             id: authData.user.id,
             full_name: fullName,
             role: role,
-            class_id: role === 'student' ? classId : null,
+            class_id: role === 'student' ? studentClassId : null,
           },
         ]);
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Erro ao criar perfil:', profileError);
+          alert('Conta criada! Por favor, verifique seu email para confirmar o acesso.');
+          navigate('/login');
+          return;
+        }
         
-        alert('Cadastro realizado com sucesso! Verifique seu email ou faça login.');
-        navigate('/login');
+        alert('Cadastro realizado com sucesso!');
+        
+        // Wait a small moment for Supabase to sync session
+        setTimeout(() => {
+          if (role === 'teacher') {
+            navigate('/manage-classes');
+          } else {
+            navigate('/dashboard');
+          }
+        }, 1000);
       }
     } catch (err) {
-      setError(err.message);
+      console.error('Erro no registro:', err);
+      setError(err.message || 'Erro ao realizar cadastro.');
     } finally {
       setLoading(false);
     }
@@ -107,19 +133,24 @@ const Register = () => {
           </div>
           
           <div className="form-group">
-            <label>Sua Turma (Apenas para Alunos)</label>
+            <label>Eu sou:</label>
             <select 
               className="form-control" 
-              value={classId} 
-              onChange={(e) => setClassId(e.target.value)}
+              value={role} 
+              onChange={(e) => setRole(e.target.value)}
+              required
             >
-              <option value="">Selecione sua turma</option>
-              {classes.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
+              <option value="student">Aluno(a)</option>
+              <option value="teacher">Professor(a)</option>
             </select>
-            <small style={{ color: 'var(--text-muted)' }}>O primeiro cadastro será definido como Professor.</small>
           </div>
+
+          {/* Students don't need to select class anymore, it's automatic based on their email */}
+          {role === 'student' && (
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
+              Sua turma será vinculada automaticamente após o cadastro.
+            </p>
+          )}
 
           <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '10px' }} disabled={loading}>
             {loading ? 'Processando...' : 'Cadastrar'}

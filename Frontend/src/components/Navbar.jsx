@@ -23,6 +23,11 @@ const Navbar = () => {
         <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           {user ? (
             <>
+              {profile?.role === 'teacher' && (
+                <Link to="/manage-classes" className="btn btn-outline" style={{ padding: '8px 16px' }}>
+                  Gerenciar Turmas
+                </Link>
+              )}
               <Link to="/dashboard" className="btn btn-outline" style={{ padding: '8px 16px' }}>
                 Painel
               </Link>

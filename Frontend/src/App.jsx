@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import ManageClasses from './pages/ManageClasses';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -30,6 +31,14 @@ const App = () => {
                 element={
                   <PrivateRoute>
                     <Dashboard />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/manage-classes" 
+                element={
+                  <PrivateRoute>
+                    <ManageClasses />
                   </PrivateRoute>
                 } 
               />

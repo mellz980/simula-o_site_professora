@@ -19,6 +19,19 @@ CREATE TABLE public.profiles (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
+-- Enable RLS for profiles
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- Policies for Profiles
+CREATE POLICY "Public profiles are viewable by everyone" 
+ON public.profiles FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert their own profile" 
+ON public.profiles FOR INSERT WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can update their own profile" 
+ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
 -- Create materials table
 CREATE TABLE public.materials (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -31,16 +44,8 @@ CREATE TABLE public.materials (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- Enable Row Level Security (RLS)
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+-- Enable RLS for materials
 ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
-
--- Policies for Profiles
-CREATE POLICY "Public profiles are viewable by everyone" 
-ON public.profiles FOR SELECT USING (true);
-
-CREATE POLICY "Users can update their own profile" 
-ON public.profiles FOR UPDATE USING (auth.uid() = id);
 
 -- Policies for Materials
 CREATE POLICY "Materials are viewable by assigned students" 
@@ -63,3 +68,24 @@ CREATE POLICY "Only teachers can delete materials"
 ON public.materials FOR DELETE USING (
     auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'teacher')
 );
+
+-- Create allowed_students table (Whitelist)
+CREATE TABLE public.allowed_students (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT NOT NULL UNIQUE,
+    class_id UUID REFERENCES public.classes(id) ON DELETE CASCADE,
+    added_by UUID REFERENCES auth.users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS for allowed_students
+ALTER TABLE public.allowed_students ENABLE ROW LEVEL SECURITY;
+
+-- Policies for allowed_students
+CREATE POLICY "Teachers can manage their allowed students" 
+ON public.allowed_students FOR ALL USING (
+    auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'teacher')
+);
+
+CREATE POLICY "Anyone can check if email is allowed" 
+ON public.allowed_students FOR SELECT USING (true);
