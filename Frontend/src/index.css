@@ -199,39 +199,49 @@ a {
 /* Responsive Fixes */
 @media (max-width: 768px) {
   .nav-content {
-    flex-direction: column;
+    flex-direction: row; /* Volta a ser lado a lado */
+    flex-wrap: nowrap;
     height: auto;
-    padding: 15px 0;
-    gap: 15px;
+    padding: 10px 15px;
+    gap: 10px;
+    justify-content: space-between;
   }
   
   .navbar {
     height: auto;
+    min-height: 60px;
   }
 
   .nav-menu {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px !important;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    gap: 8px !important;
   }
 
   .logo {
-    font-size: 1.2rem;
+    font-size: 1rem; /* Menor no celular */
+    gap: 5px;
+  }
+
+  .logo span span {
+    display: none; /* Esconde o "Nunes" no celular para caber tudo */
+  }
+
+  .btn {
+    padding: 6px 10px; /* Botões menores */
+    font-size: 0.8rem;
+    width: auto; /* Não ocupa a largura toda mais */
   }
 
   h1 {
-    font-size: 1.8rem;
-    text-align: center;
-  }
-
-  p.text-muted {
+    font-size: 1.6rem;
     text-align: center;
   }
 
   header {
     flex-direction: column;
     text-align: center;
-    gap: 20px;
+    gap: 15px;
   }
 
   .dashboard-grid {
@@ -242,11 +252,7 @@ a {
     text-align: center;
   }
 
-  .btn {
-    width: 100%;
-  }
-
   .user-info {
-    display: none !important; /* Hide name on small mobile to save space */
+    display: none !important;
   }
 }
