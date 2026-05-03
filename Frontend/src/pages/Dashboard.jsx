@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
-import { Plus, Trash2, ExternalLink, FileText, Link as LinkIcon, BookOpen, LayoutGrid, ArrowLeft, Users } from 'lucide-react';
+import { Plus, Trash2, ExternalLink, FileText, Link as LinkIcon, BookOpen, LayoutGrid, ArrowLeft, Users, Edit2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -21,6 +21,7 @@ const Dashboard = () => {
   const [newClassName, setNewClassName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [postToAll, setPostToAll] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -82,7 +83,14 @@ const Dashboard = () => {
         teacher_id: user.id 
       };
 
-      if (postToAll) {
+      if (editingItem) {
+        const { error } = await supabase
+          .from('materials')
+          .update(materialData)
+          .eq('id', editingItem.id);
+        if (error) throw error;
+        setEditingItem(null);
+      } else if (postToAll) {
         const inserts = classes.map(c => ({ ...materialData, class_id: c.id }));
         const { error } = await supabase.from('materials').insert(inserts);
         if (error) throw error;
@@ -99,6 +107,15 @@ const Dashboard = () => {
       if (selectedClass) fetchMaterials(selectedClass.id);
     } catch (err) { alert(err.message); }
     finally { setIsSubmitting(false); }
+  };
+
+  const handleEditClick = (item) => {
+    setEditingItem(item);
+    setTitle(item.title);
+    setDescription(item.description || '');
+    setType(item.type);
+    setContentUrl(item.content_url || '');
+    setShowAddForm(true);
   };
 
   const handleDeleteMaterial = async (id) => {
@@ -154,7 +171,7 @@ const Dashboard = () => {
 
         {showAddForm && (
           <div className="card fade-in" style={{ marginBottom: '40px', border: '2px solid var(--primary-light)' }}>
-            <h3 style={{ marginBottom: '20px' }}>Publicar em {currentClass?.name}</h3>
+            <h3 style={{ marginBottom: '20px' }}>{editingItem ? 'Editar Conteúdo' : `Publicar em ${currentClass?.name}`}</h3>
             <form onSubmit={handleAddMaterial}>
               <div className="form-group">
                 <label>Título do Conteúdo / Arquivo</label>
@@ -198,22 +215,34 @@ const Dashboard = () => {
                 </div>
               </div>
               
-              <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                <input 
-                  type="checkbox" 
-                  id="postToAll" 
-                  checked={postToAll} 
-                  onChange={(e) => setPostToAll(e.target.checked)} 
-                  style={{ width: '20px', height: '20px' }}
-                />
-                <label htmlFor="postToAll" style={{ margin: 0, fontWeight: 600, color: 'var(--primary)' }}>
-                  Postar em TODAS as minhas turmas simultaneamente
-                </label>
-              </div>
+              {!editingItem && (
+                <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                  <input 
+                    type="checkbox" 
+                    id="postToAll" 
+                    checked={postToAll} 
+                    onChange={(e) => setPostToAll(e.target.checked)} 
+                    style={{ width: '20px', height: '20px' }}
+                  />
+                  <label htmlFor="postToAll" style={{ margin: 0, fontWeight: 600, color: 'var(--primary)' }}>
+                    Postar em TODAS as minhas turmas simultaneamente
+                  </label>
+                </div>
+              )}
 
               <button type="submit" className="btn btn-primary" disabled={isSubmitting} style={{ width: '100%' }}>
-                {isSubmitting ? 'Publicando...' : 'Publicar Agora'}
+                {isSubmitting ? 'Salvando...' : (editingItem ? 'Salvar Alterações' : 'Publicar Agora')}
               </button>
+              {editingItem && (
+                <button 
+                  type="button" 
+                  className="btn btn-outline" 
+                  style={{ width: '100%', marginTop: '10px' }}
+                  onClick={() => { setEditingItem(null); setShowAddForm(false); setTitle(''); setDescription(''); setContentUrl(''); }}
+                >
+                  Cancelar Edição
+                </button>
+              )}
             </form>
           </div>
         )}
@@ -229,7 +258,16 @@ const Dashboard = () => {
               <div key={item.id} className="card fade-in">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                   <span className="material-type">{item.type}</span>
-                  {isTeacher && <button onClick={() => handleDeleteMaterial(item.id)} style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }}><Trash2 size={16} /></button>}
+                  {isTeacher && (
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button onClick={() => handleEditClick(item)} style={{ color: 'var(--primary)', border: 'none', background: 'none', cursor: 'pointer' }} title="Editar">
+                        <Edit2 size={16} />
+                      </button>
+                      <button onClick={() => handleDeleteMaterial(item.id)} style={{ color: 'red', border: 'none', background: 'none', cursor: 'pointer' }} title="Excluir">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <h3>{item.title}</h3>
                 <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: '10px 0 20px' }}>{item.description}</p>

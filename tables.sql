@@ -1,7 +1,8 @@
 -- Create classes table
 CREATE TABLE public.classes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    created_by UUID REFERENCES auth.users(id) DEFAULT auth.uid(),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -47,26 +48,25 @@ CREATE TABLE public.materials (
 -- Enable RLS for materials
 ALTER TABLE public.materials ENABLE ROW LEVEL SECURITY;
 
+-- Enable RLS for classes
+ALTER TABLE public.classes ENABLE ROW LEVEL SECURITY;
+
+-- Policies for Classes
+CREATE POLICY "Teachers can manage their own classes" 
+ON public.classes FOR ALL USING (auth.uid() = created_by);
+
+CREATE POLICY "Students can see their own class" 
+ON public.classes FOR SELECT USING (
+    id IN (SELECT class_id FROM public.profiles WHERE id = auth.uid())
+);
+
 -- Policies for Materials
-CREATE POLICY "Materials are viewable by assigned students" 
+CREATE POLICY "Teachers can manage their own materials" 
+ON public.materials FOR ALL USING (auth.uid() = teacher_id);
+
+CREATE POLICY "Students can view materials for their class" 
 ON public.materials FOR SELECT USING (
-    (auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'teacher')) OR
-    (class_id IN (SELECT class_id FROM public.profiles WHERE id = auth.uid()))
-);
-
-CREATE POLICY "Only teachers can insert materials" 
-ON public.materials FOR INSERT WITH CHECK (
-    auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'teacher')
-);
-
-CREATE POLICY "Only teachers can update materials" 
-ON public.materials FOR UPDATE USING (
-    auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'teacher')
-);
-
-CREATE POLICY "Only teachers can delete materials" 
-ON public.materials FOR DELETE USING (
-    auth.uid() IN (SELECT id FROM public.profiles WHERE role = 'teacher')
+    class_id IN (SELECT class_id FROM public.profiles WHERE id = auth.uid())
 );
 
 -- Create allowed_students table (Whitelist)

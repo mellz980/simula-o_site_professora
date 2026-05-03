@@ -20,7 +20,7 @@ const Navbar = () => {
           <span>Profa. Fabiana <span>Nunes</span></span>
         </Link>
 
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+        <div className="nav-menu" style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
           {user ? (
             <>
               {profile?.role === 'teacher' && (
@@ -31,7 +31,7 @@ const Navbar = () => {
               <Link to="/dashboard" className="btn btn-outline" style={{ padding: '8px 16px' }}>
                 Painel
               </Link>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-muted)' }}>
+              <div className="user-info" style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-muted)' }}>
                 <UserIcon size={20} />
                 <span style={{ fontWeight: 600 }}>{profile?.full_name || 'Usuário'}</span>
               </div>
